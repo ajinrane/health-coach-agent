@@ -188,13 +188,65 @@ def export_session_notes(output_path=None):
     return output_path
 
 
+def export_demographics(output_path=None):
+    """Export patient demographics — 'Table 1' for research papers.
+
+    Columns: patient_id, age, sex, conditions, medications, created_at,
+             session_count, total_exchanges, active_goals, completed_goals,
+             assessment_count
+    """
+    ensure_export_dir()
+    if output_path is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = EXPORT_DIR / f"demographics_{timestamp}.csv"
+
+    rows = []
+    for p_summary in list_patients():
+        profile = load_patient(p_summary["patient_id"])
+        if not profile:
+            continue
+        demo = profile.get("demographics", {})
+        goals = profile.get("goals", [])
+        rows.append({
+            "patient_id": profile["patient_id"],
+            "age": demo.get("age", ""),
+            "sex": demo.get("sex", ""),
+            "conditions": "|".join(demo.get("conditions", [])),
+            "medications": "|".join(demo.get("medications", [])),
+            "created_at": profile.get("created_at", "")[:10],
+            "session_count": len(profile.get("sessions", [])),
+            "total_exchanges": profile.get("conversation_count", 0),
+            "active_goals": len([g for g in goals if g.get("status") == "active"]),
+            "completed_goals": len([g for g in goals if g.get("status") == "completed"]),
+            "assessment_count": len(profile.get("assessments", []))
+        })
+
+    if not rows:
+        print("  No patient data to export.")
+        return None
+
+    fieldnames = ["patient_id", "age", "sex", "conditions", "medications",
+                  "created_at", "session_count", "total_exchanges",
+                  "active_goals", "completed_goals", "assessment_count"]
+
+    with open(output_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    print(f"  Exported {len(rows)} patient demographics to {output_path}")
+    return output_path
+
+
 def export_all():
     """Run all exports and return paths."""
     print(f"\n  Research Data Export")
     print(f"  {'='*50}")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     paths = []
+    p = export_demographics()
+    if p:
+        paths.append(p)
     p = export_patient_trajectories()
     if p:
         paths.append(p)
@@ -206,7 +258,7 @@ def export_all():
         paths.append(p)
 
     if paths:
-        print(f"\n  All exports saved to: {EXPORT_DIR}")
+        print(f"\n  {len(paths)} files exported to: {EXPORT_DIR}")
     else:
         print("\n  No data to export yet. Use the coach to build up patient data first.")
     print(f"  {'='*50}\n")

@@ -12,6 +12,7 @@ load_dotenv()
 
 client = anthropic.Anthropic()
 MODEL = "claude-sonnet-4-20250514"
+EXTRACTION_MODEL = "claude-haiku-4-5-20251001"  # Lighter model for structured extraction
 
 
 def chat(user_message, profile, conversation_history):
@@ -62,7 +63,7 @@ def extract_profile_updates(user_message, assistant_response, profile):
 
     try:
         response = client.messages.create(
-            model=MODEL,
+            model=EXTRACTION_MODEL,
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}]
         )
