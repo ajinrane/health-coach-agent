@@ -20,6 +20,7 @@ from coach.export import export_all
 from coach.intake import run_intake
 from coach.trends import analyze_trends
 from coach.safety import screen_message, handle_safety_flags
+from coach.research import research_dashboard
 
 
 BANNER = """
@@ -40,6 +41,7 @@ BANNER = """
 |    /session   - View current session summary                 |
 |    /history   - View past sessions                           |
 |    /export    - Export data for research (CSV)               |
+|    /dashboard - Research analytics across all patients       |
 |    /help      - Show this menu                               |
 |    /quit      - End session and save                         |
 |                                                              |
@@ -59,6 +61,7 @@ HELP_TEXT = """
     /session   - View current session notes
     /history   - View past session summaries with SOAP notes
     /export    - Export all data to CSV for research analysis
+    /dashboard - Research analytics: demographics, engagement, effect sizes
     /help      - Show this help
     /quit      - End session, generate SOAP note, and save
 
@@ -309,6 +312,10 @@ def main():
 
         elif command == "/export":
             export_all()
+            continue
+
+        elif command == "/dashboard":
+            research_dashboard()
             continue
 
         # Safety screening before sending to AI

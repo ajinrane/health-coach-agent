@@ -194,7 +194,7 @@ def _run_likert(assessment):
                 if 0 <= choice < len(options):
                     score = options[choice][1]
                     # Reverse score items 2 and 3 for stress assessment (positive items)
-                    if assessment is ASSESSMENTS.get("stress") and i in [1, 2]:
+                    if assessment.get("name", "").startswith("Perceived Stress") and i in [1, 2]:
                         score = options[-1][1] - score
                     total += score
                     details[f"q{i+1}"] = {"question": question, "answer": options[choice][0], "score": score}

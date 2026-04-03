@@ -63,10 +63,10 @@ RED_FLAGS = {
     },
     "medical_emergency": {
         "patterns": [
-            r"\b(chest pain|can'?t breathe|difficulty breathing|crushing pressure)\b",
-            r"\b(stroke|numbness|slurred speech|vision loss)\b",
-            r"\b(passing out|fainted|unconscious|seizure)\b",
-            r"\b(severe (pain|bleeding|allergic))\b",
+            r"\b(chest\s+(pain|hurts?|pressure|tight|ache)|can'?t breathe|difficulty breathing|crushing pressure|short(ness)? of breath)\b",
+            r"\b(stroke|numbness|slurred speech|vision loss|face droop)\b",
+            r"\b(passing out|fainted|unconscious|seizure|collaps)\b",
+            r"\b(severe\s+(pain|bleeding|allergic|headache))\b",
         ],
         "severity": "critical",
         "response": (
