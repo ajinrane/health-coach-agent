@@ -11,48 +11,56 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from coach.memory import create_patient, load_patient, list_patients, save_patient
+from coach.memory import create_patient, load_patient, list_patients, save_patient, add_assessment
 from coach.agent import chat, extract_profile_updates, apply_profile_updates
 from coach.session import start_session, add_exchange, end_session, display_session_summary, list_sessions, load_session
 from coach.assessments import get_assessment_list, run_assessment
 from coach.goals import display_goals, interactive_check_in, interactive_add_goal, interactive_complete_goal
 from coach.export import export_all
-from coach.memory import add_assessment
+from coach.intake import run_intake
+from coach.trends import analyze_trends
+from coach.safety import screen_message, handle_safety_flags
 
 
 BANNER = """
-╔══════════════════════════════════════════════════════════════╗
-║                  Health Coach Agent                         ║
-║         Clinical Lifestyle Medicine Coaching                ║
-╠══════════════════════════════════════════════════════════════╣
-║  Commands:                                                  ║
-║    /assess    — Run a validated clinical assessment          ║
-║    /goals     — View your goals and adherence               ║
-║    /newgoal   — Create a new SMART goal                     ║
-║    /checkin   — Check in on goal progress                   ║
-║    /complete  — Mark a goal as completed                    ║
-║    /profile   — View your health profile                    ║
-║    /session   — View current session summary                ║
-║    /history   — View past sessions                          ║
-║    /export    — Export data for research (CSV)              ║
-║    /help      — Show this menu                              ║
-║    /quit      — End session and save                        ║
-╚══════════════════════════════════════════════════════════════╝
++==============================================================+
+|                  Health Coach Agent                           |
+|         Clinical Lifestyle Medicine Coaching                  |
++==============================================================+
+|                                                              |
+|  Commands:                                                   |
+|    /intake    - Run full baseline assessment battery          |
+|    /assess    - Run a single clinical assessment             |
+|    /trends    - View your assessment trends over time         |
+|    /goals     - View your goals and adherence                |
+|    /newgoal   - Create a new SMART goal                      |
+|    /checkin   - Check in on goal progress                    |
+|    /complete  - Mark a goal as completed                     |
+|    /profile   - View your health profile                     |
+|    /session   - View current session summary                 |
+|    /history   - View past sessions                           |
+|    /export    - Export data for research (CSV)               |
+|    /help      - Show this menu                               |
+|    /quit      - End session and save                         |
+|                                                              |
++==============================================================+
 """
 
 HELP_TEXT = """
   Commands:
-    /assess    — Run a validated clinical screening (PHQ-2, GAD-2, sleep, etc.)
-    /goals     — View all goals with adherence tracking
-    /newgoal   — Create a new SMART goal
-    /checkin   — Check in on your active goals
-    /complete  — Mark a goal as completed
-    /profile   — View your full health profile
-    /session   — View current session notes
-    /history   — View past session summaries
-    /export    — Export all data to CSV for research analysis
-    /help      — Show this help
-    /quit      — End session, generate SOAP note, and save
+    /intake    - Run the full intake assessment battery (6 screenings)
+    /assess    - Run a single validated clinical screening
+    /trends    - View assessment score trends and goal adherence over time
+    /goals     - View all goals with adherence tracking
+    /newgoal   - Create a new SMART goal
+    /checkin   - Check in on your active goals
+    /complete  - Mark a goal as completed
+    /profile   - View your full health profile
+    /session   - View current session notes
+    /history   - View past session summaries with SOAP notes
+    /export    - Export all data to CSV for research analysis
+    /help      - Show this help
+    /quit      - End session, generate SOAP note, and save
 
   Or just talk to your coach — type anything to start a conversation.
 """
@@ -73,7 +81,7 @@ def select_or_create_patient():
         sex = demo.get("sex", "")
         conditions = ", ".join(demo.get("conditions", [])) or "none listed"
         sessions = p.get("session_count", 0)
-        print(f"    {i+1}) Patient {p['patient_id']} — {age}yo {sex}, {conditions} ({sessions} sessions)")
+        print(f"    {i+1}) Patient {p['patient_id']} -- {age}yo {sex}, {conditions} ({sessions} sessions)")
 
     print(f"    {len(patients)+1}) Create new profile")
 
@@ -121,7 +129,16 @@ def onboard_new_patient():
 
     profile = create_patient(demographics)
     print(f"\n  Profile created! Your ID: {profile['patient_id']}")
-    print("  Tip: Run /assess to take a baseline health assessment.\n")
+
+    # Offer intake assessment for new patients
+    print("\n  Would you like to run a full baseline assessment?")
+    print("  This takes ~5 minutes and covers mood, sleep, exercise, nutrition, and stress.")
+    do_intake = input("  Run intake assessment? (y/n): ").strip().lower()
+    if do_intake == "y":
+        run_intake(profile)
+    else:
+        print("  No problem — run /intake anytime, or /assess for individual screenings.\n")
+
     return profile
 
 
@@ -144,7 +161,7 @@ def handle_assess(profile, session):
                 result = run_assessment(key)
                 if result:
                     score, max_score, interpretation, details = result
-                    assessment_record = add_assessment(
+                    add_assessment(
                         profile, assessments[idx - 1][1],
                         score, max_score, interpretation, details
                     )
@@ -158,9 +175,8 @@ def handle_assess(profile, session):
 
 def handle_profile(profile):
     """Handle the /profile command."""
-    from coach.memory import get_profile_summary
     print(f"\n  {'='*50}")
-    print(f"  Patient Profile — {profile['patient_id']}")
+    print(f"  Patient Profile -- {profile['patient_id']}")
     print(f"  {'='*50}")
     print(f"  Created: {profile['created_at'][:10]}")
     print(f"  Sessions: {len(profile.get('sessions', []))}")
@@ -184,7 +200,7 @@ def handle_profile(profile):
     if assessments:
         print(f"\n  Assessment History ({len(assessments)} total):")
         for a in assessments[-5:]:
-            print(f"    {a['date']} — {a['type']}: {a['score']}/{a['max_score']} ({a['interpretation'][:60]})")
+            print(f"    {a['date']} -- {a['type']}: {a['score']}/{a['max_score']} ({a['interpretation'][:60]})")
 
     goals = profile.get("goals", [])
     active = [g for g in goals if g.get("status") == "active"]
@@ -239,7 +255,7 @@ def main():
         # Handle commands
         command = user_input.lower()
 
-        if command == "/quit" or command == "/exit":
+        if command in ("/quit", "/exit"):
             print("\n  Ending session...")
             session = end_session(session, profile)
             if session.get("soap_note"):
@@ -251,8 +267,16 @@ def main():
             print(HELP_TEXT)
             continue
 
+        elif command == "/intake":
+            run_intake(profile)
+            continue
+
         elif command == "/assess":
             handle_assess(profile, session)
+            continue
+
+        elif command == "/trends":
+            analyze_trends(profile)
             continue
 
         elif command == "/goals":
@@ -287,6 +311,15 @@ def main():
             export_all()
             continue
 
+        # Safety screening before sending to AI
+        safety_flags = screen_message(user_input)
+        if safety_flags:
+            critical = handle_safety_flags(safety_flags)
+            # Log safety event in session
+            add_exchange(session, user_input, f"[SAFETY SCREEN: {', '.join(f['category'] for f in safety_flags)}]")
+            if critical:
+                continue  # Don't send to AI for critical safety concerns
+
         # Regular conversation
         print()
         try:
@@ -298,7 +331,7 @@ def main():
             # Record in session
             add_exchange(session, user_input, response)
 
-            # Extract and apply profile updates (async-style, non-blocking feel)
+            # Extract and apply profile updates in background
             try:
                 updates = extract_profile_updates(user_input, response, profile)
                 profile = apply_profile_updates(profile, updates)
