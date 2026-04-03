@@ -3,6 +3,9 @@ venv/
 __pycache__/
 *.pyc
 user_memory.json
-data/patients/
-data/sessions/
-data/exports/
+
+# Data directories — keep structure but ignore contents
+data/patients/*.json
+data/sessions/*.json
+data/exports/*.csv
+data/exports/*.json
