@@ -79,6 +79,33 @@ def build_system_prompt(patient_profile=None):
             for a in recent:
                 context += f"\n  * {a['type']}: {a['score']}/{a['max_score']} on {a['date']} — {a['interpretation']}"
 
+        # Include recent check-in data for accountability
+        all_recent_checkins = []
+        for g in patient_profile.get("goals", []):
+            for ci in g.get("check_ins", [])[-3:]:
+                all_recent_checkins.append({
+                    "goal": g["description"],
+                    "date": ci["date"],
+                    "adherence": ci["adherence"],
+                    "notes": ci.get("notes", "")
+                })
+        if all_recent_checkins:
+            all_recent_checkins.sort(key=lambda x: x["date"], reverse=True)
+            context += "\n- Recent check-ins:"
+            for ci in all_recent_checkins[:5]:
+                status = "completed" if ci["adherence"] else "missed"
+                notes = f" ({ci['notes']})" if ci["notes"] else ""
+                context += f"\n  * {ci['date']}: {ci['goal']} — {status}{notes}"
+
+        # Session count for continuity
+        session_count = len(patient_profile.get("sessions", []))
+        if session_count > 0:
+            context += f"\n- This is session #{session_count + 1}. Reference prior progress when relevant."
+
+        demo_notes = patient_profile.get("demographics", {}).get("notes", "")
+        if demo_notes:
+            context += f"\n- Additional notes: {demo_notes}"
+
         prompt += context
 
     return prompt

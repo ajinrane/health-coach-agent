@@ -10,8 +10,9 @@ import re
 RED_FLAGS = {
     "suicidal_ideation": {
         "patterns": [
-            r"\b(want to|going to|thinking about|plan to)\s*(die|kill myself|end it|end my life)\b",
-            r"\b(suicid|self[- ]?harm|hurt myself|cut myself)\b",
+            r"\b(want(ing)? to|going to|think(ing)? about|plan(ning)? to)\s*(die|kill myself|end(ing)? (it|my life))\b",
+            r"\bsuicid",
+            r"\b(self[- ]?harm|hurt(ing)? myself|cut(ting)? myself)\b",
             r"\b(no reason to live|better off dead|wish i was dead|don'?t want to be alive)\b",
             r"\b(goodbye|farewell)\b.*\b(forever|final|last)\b",
         ],
@@ -29,8 +30,11 @@ RED_FLAGS = {
     },
     "disordered_eating": {
         "patterns": [
-            r"\b(purg|binge and purg|make myself (throw up|vomit)|laxative)\b",
-            r"\b(anorexi|bulimi)\b",
+            r"\bpurg(e|ed|ing|es)?\b",
+            r"\bbinge\b.*\bpurg",
+            r"\b(make|making) myself (throw up|vomit)\b",
+            r"\blaxative",
+            r"\b(anorexi|bulimi)",
             r"\b(haven'?t eaten|not eating|starving myself|fasting)\b.*(days|week)",
             r"\b(hate my body|disgusting|fat|ugly)\b.*(eat|food|weight)",
         ],
@@ -47,7 +51,9 @@ RED_FLAGS = {
     },
     "substance_crisis": {
         "patterns": [
-            r"\b(overdos|od'?d|too (many|much) (pills|drugs|medication))\b",
+            r"\boverdos(e|ed|ing)?",
+            r"\bod'?d\b",
+            r"\btoo (many|much) (pills|drugs|medication)",
             r"\b(withdrawal|detox|shaking|seizure)\b.*(alcohol|drug|opioid|benzo)",
             r"\b(can'?t stop|addicted|dependent)\b.*(drink|alcohol|drug|pills|opioid)",
         ],
