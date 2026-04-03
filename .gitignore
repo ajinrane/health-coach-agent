@@ -3,3 +3,6 @@ venv/
 __pycache__/
 *.pyc
 user_memory.json
+data/patients/
+data/sessions/
+data/exports/
